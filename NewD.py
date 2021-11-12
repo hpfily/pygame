@@ -189,6 +189,8 @@ sprite_skill.set_colorkey(transColor)
 totle_time=0
 position=[100,150]
 mouse_pos=[0,0]
+angle=0
+direct_vec=Vector2()
 
 while True:
     screenSurface.blit(bgSurface, (0,0))
@@ -208,7 +210,11 @@ while True:
             mouse_pos_v=Vector2(mouse_pos)
             position_v=Vector2([200,200])
             print(position_v,mouse_pos_v)
-            angle=Vector2().angle_to(mouse_pos_v-position_v)
+
+            direct_vec = mouse_pos_v-position_v
+            direct_vec[1] = -direct_vec[1]
+            direct_vec = direct_vec.normalize()
+            angle=Vector2().angle_to(direct_vec)
             print(angle)
 
 
@@ -228,11 +234,16 @@ while True:
     rec=Rect(w-skill_w,0,skill_h,skill_h)
 
     sub_skill=sprite_skill.subsurface(rec)
-    r_skill=pygame.transform.rotate(sub_skill,180)
+    r_skill=pygame.transform.rotate(sub_skill,180+angle)
     r_skill.set_colorkey(transColor)
-    speed=60
+    
+    speed=200
     dis = speed*Passtime/1000
-    position[0]+=dis
+    position[0]+=dis*direct_vec[0]
+    position[1]-=dis*direct_vec[1]
+    print(position)
+
+    
     screenSurface.blit(r_skill,position)
     
     # screenSurface.blit(sprite_skill,position, rec)
