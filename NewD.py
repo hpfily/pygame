@@ -79,8 +79,7 @@ class Role_Sprit(pygame.sprite.Sprite):
             self.passed_time = 0
         self.directRect  = self.allFrameRect[self.direction]
         self.curBlitSrcRect   = self.directRect[int(self.frame)]
-        self.screen.blit(self.spritSurface, self.spritRect.topleft, self.curBlitSrcRect )
-        #pygame.draw.rect(self.screen, (255,255,255), self.spritRect, 1)
+        self.screen.blit(self.spritSurface, self.spritRect.topleft, self.curBlitSrcRect)
 
 
 class Role(object):
@@ -149,6 +148,53 @@ class Role(object):
         sprite.update(passed_time, self.direction, self.position)
         
 
+# Skill class
+class Skill_Spirte(pygame.sprite.Sprite):
+    def __init__(self, screen_surf, skill_surf, skill_rect, init_pos, direct_vec2):
+        pygame.sprite.Sprite.__init__(self)
+        #surface
+        self.screen = screen_surf
+        self.sprit_surf = skill_surf
+        self.skill_rect = skill_rect
+        #fps time 200 ms
+        self.flush_time = 200
+        #color key black
+        self.transColor = pygame.Color(0, 0, 0)
+
+        self.init_pos = list(init_pos)
+        self.cur_pos= list(init_pos)
+        self.speed = 200
+        self.direct_vec2 = direct_vec2
+        self.live_time = 0
+        self.angle=Vector2().angle_to(self.direct_vec2)
+
+        self.live_dis=0
+    
+    def move_pos(self, passtime):
+        self.live_dis += self.speed*passtime/1000
+        self.cur_pos[0]= self.init_pos[0]+self.live_dis*self.direct_vec2[0]
+        self.cur_pos[1]= self.init_pos[1]-self.live_dis*self.direct_vec2[1]
+        
+        self.rect=self.image.get_rect()
+        self.rect.move_ip(self.cur_pos[0], self.cur_pos[1])
+
+    def update_image(self, passtime):       
+        self.live_time=self.live_time+passtime       
+        
+        rect_index=int(self.live_time/self.flush_time % 4)
+        sub_surf=self.sprit_surf.subsurface(self.skill_rect[rect_index])
+
+        rotate_surf=pygame.transform.rotate(sub_surf,180+self.angle)
+        rotate_surf.set_colorkey(self.transColor)
+        
+        self.image=rotate_surf
+
+
+
+    def update(self, passtime):    
+        self.update_image(passtime)
+        self.move_pos(passtime)
+
 
 pygame.init()
 
@@ -165,11 +211,13 @@ bgSurface       = pygame.image.load(MAPPATH).convert()
 clock           = pygame.time.Clock()
 
 roleIdleSpirt   = Role_Sprit(screenSurface,isIdleSprit=True)
-RoleSpirtPath   = RESOURCEPATH + '/spritZF_run.png'
+#RoleSpirtPath   = RESOURCEPATH + '/spritZF_run.png'
+RoleSpirtPath   = RESOURCEPATH + '/player_run.png'
 roleIdleSpirt.load(RoleSpirtPath, 4, 4)
 
 roleRunSprit    = Role_Sprit(screenSurface)
-RoleSpirtPath   = RESOURCEPATH + '/spritZF_run.png'
+#RoleSpirtPath   = RESOURCEPATH + '/spritZF_run.png'
+RoleSpirtPath   = RESOURCEPATH + '/player_run.png'
 roleRunSprit.load(RoleSpirtPath, 4, 4)
 
 roleAttackSpirt       = Role_Sprit(screenSurface)
@@ -182,19 +230,31 @@ Player.addSprite(RoleStatus.RUN,  roleRunSprit)
 Player.addSprite(RoleStatus.ATTACK,  roleAttackSpirt)
 
 transColor = pygame.Color(0, 0, 0)
-sprite_skill=pygame.image.load(RESOURCEPATH+'/skill.png').convert_alpha()
-sprite_skill.set_colorkey(transColor)
+surf_skill=pygame.image.load(RESOURCEPATH+'/skill.png').convert()
+
+#Skill rect
+skill_rect = [] 
+skill_split_w=60
+skill_split_h=50
+skill_col=4
+for i in range(0,skill_col):
+    skill_rect.append(pygame.Rect(skill_split_w*i, 0, skill_split_w, skill_split_h))
+
+print(skill_rect)
+
+skill_pos=[200,200]
 
 
-totle_time=0
-position=[100,150]
-mouse_pos=[0,0]
-angle=0
-direct_vec=Vector2()
+#pygame.sprite.remove()
+#del(skill)
+ 
+
+skills=pygame.sprite.Group()
 
 while True:
     screenSurface.blit(bgSurface, (0,0))
     direction = None
+    Passtime = clock.tick(60)
 #event loop
     for event in pygame.event.get():
         #print(event)
@@ -206,9 +266,9 @@ while True:
                 pygame.quit()
                 exit()
         if event.type == MOUSEBUTTONDOWN:
-            mouse_pos=event.pos
-            mouse_pos_v=Vector2(mouse_pos)
-            position_v=Vector2([200,200])
+            
+            mouse_pos_v=Vector2(event.pos)
+            position_v=Vector2(Player.position)
             print(position_v,mouse_pos_v)
 
             direct_vec = mouse_pos_v-position_v
@@ -216,53 +276,37 @@ while True:
             direct_vec = direct_vec.normalize()
             angle=Vector2().angle_to(direct_vec)
             print(angle)
+            
+            shoot_skill=Skill_Spirte(screenSurface,surf_skill,skill_rect,Player.position, direct_vec)
 
-
-    Passtime = clock.tick()
+            skills.add(shoot_skill)
+    
+    for skill in skills:
+        if skill.live_dis >200:
+              skills.remove(skill)
+        skill.update(Passtime)
+    
+    skills.draw(screenSurface)
+    
     Key  = pygame.key.get_pressed()
     Player.update(Passtime, Key)
 
-    skill_w=60
-    skill_h=50
-    rate=200
-    
-    totle_time=totle_time+Passtime
-    f_numb=int(totle_time/rate % 4)+1
-    w=f_numb*skill_w
-    h=f_numb*skill_h
-    
-    rec=Rect(w-skill_w,0,skill_h,skill_h)
+    rect = Rect(300, 200 , 100, 100)
+    pygame.draw.rect(screenSurface,(255,255,0),rect,1)
+    Enemy=Skill_Spirte(screenSurface,surf_skill,skill_rect, [400,200], (1, 0))
+    Enemy.update(Passtime)
+    pygame.sprite.Group(Enemy).draw(screenSurface)
 
-    sub_skill=sprite_skill.subsurface(rec)
-    r_skill=pygame.transform.rotate(sub_skill,180+angle)
-    r_skill.set_colorkey(transColor)
-    
-    speed=200
-    dis = speed*Passtime/1000
-    position[0]+=dis*direct_vec[0]
-    position[1]-=dis*direct_vec[1]
-    print(position)
+    skill_hit=pygame.sprite.spritecollide(Enemy,skills,0)
+    if skill_hit:
+        print("碰上啦")
+    for sp in skill_hit:
+        sp.kill()
+        print(sp.rect)
+        del(sp)
 
-    
-    screenSurface.blit(r_skill,position)
-    
-    # screenSurface.blit(sprite_skill,position, rec)
-    # screenSurface.blit(sprite_skill,(100, 150), (0, 0, 60, 50))
-    # screenSurface.blit(sprite_skill,(100, 200), (60, 0, 60, 50))
-    # screenSurface.blit(sprite_skill,(100, 250), (120, 0, 60, 50))
-    # screenSurface.blit(sprite_skill,(100, 300), (180, 0, 60, 50))
-
-    # sub_skill=sprite_skill.subsurface(rec)
-    
-    # r_skill=pygame.transform.rotate(sub_skill,10)
-    # r_skill.set_colorkey(transColor)
-    # screenSurface.blit(r_skill,(100, 150))
-
-    rect = Rect(0, 0 , 50, 50)
-    pygame.draw.rect(screenSurface,(55,88,110),rect,1)
-
-    rect.center = (50,50)
-    pygame.draw.rect(screenSurface,(255,0,0),rect,1)
+    #rect.center = (50,50)
+    #pygame.draw.rect(screenSurface,(255,0,0),rect,1)
     #print(pygame.key.get_pressed())
     pygame.display.update()
 
