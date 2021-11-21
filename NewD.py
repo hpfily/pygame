@@ -1,12 +1,16 @@
 #-*- coding:utf-8 -*-
 import pygame
-from pygame import Surface, Vector2, sprite
-from pygame import image
+from pygame import Surface, Vector2, sprite,image
 from pygame.locals import *
 from sys import exit
 from os  import getcwd
 
 from enum import Enum
+
+SCREENSIZE      = (800,600)
+RESOURCEPATH    = getcwd() + '/pic'
+print (RESOURCEPATH)
+MAPPATH         = RESOURCEPATH + '/bg.jpg'
 
 RoleStatus    = Enum('RoleStatus', ('IDLE','RUN','ATTACK') )
 Direction     = Enum('Direction', ('UP','DOWN','LEFT','RIGHT') )
@@ -51,36 +55,39 @@ class Role_Sprit(pygame.sprite.Sprite):
     def load(self,file,row,col):
         self.animationRow     = row
         self.animationCol     = col
-        self.spritSurface = pygame.image.load(file).convert_alpha()
+        self.spritSurface = pygame.image.load(file)
         self.allFrameRect = self.splitRect(self.spritSurface,self.animationRow,self.animationCol)
 
 
-    def update(self, passed_time, curDirection, postion):
-        #assert(self.allrect.has_key(direction))
-        
-        #self.positionBlitTopLeft = (postion[0]-self.frameWidth/2, postion[1]-self.frameHeight/2)
-        #self.spritRect = Rect(self.positionBlitTopLeft, (self.frameWidth, self.frameHeight) )
-        self.spritRect = Rect(postion, (self.frameWidth, self.frameHeight) )
-        self.spritRect.center = postion 
+    def update_pos(self, postion):
+        self.rect=self.image.get_rect()       
+        #self.rect.move_ip(postion)
+        self.rect.center = postion
+
+        pygame.draw.rect(self.screen,(255,0,0), self.rect,1)
+
+    def update_image(self, passtime,  curDirection):              
         
         self.direction = curDirection
         
         if self.isIdleSprit:
             self.directRect  = self.allFrameRect[self.direction]
             self.curBlitSrcRect   = self.directRect[0]
-            self.screen.blit(self.spritSurface, self.spritRect.topleft, self.curBlitSrcRect )
+            self.image=self.spritSurface.subsurface(self.curBlitSrcRect)
             return
-
         
-        #print self.direction
-        self.passed_time += passed_time
+        self.passed_time += passtime
         self.frame  = (self.passed_time/self._rate)%self.animationCol
         if self.frame == 0 and self.passed_time > self._rate:
             self.passed_time = 0
         self.directRect  = self.allFrameRect[self.direction]
         self.curBlitSrcRect   = self.directRect[int(self.frame)]
-        self.screen.blit(self.spritSurface, self.spritRect.topleft, self.curBlitSrcRect)
+        self.image=self.spritSurface.subsurface(self.curBlitSrcRect)
+        
+    def update(self, passed_time, curDirection, postion):
 
+        self.update_image(passed_time, curDirection)
+        self.update_pos(postion)
 
 class Role(object):
     def __init__(self, position, direction):
@@ -91,11 +98,11 @@ class Role(object):
         self.direction  = direction
         self.spriteDict = { RoleStatus.IDLE:None, RoleStatus.RUN:None, RoleStatus.ATTACK:None }
 
-    def addSprite(self, status, sprit):
-       # assert status in RoleStatus, "No this status"
-        self.spriteDict[status] = sprit
+    def addSprite(self, status, sprite):
+        self.spriteDict[status] = sprite
+        #self.sprite = sprite
 
-    def getDirection(self, pressKey):
+    def getDirection(self, pressKey, mouse_move_pos):
         direction = None
         runKeyPress = False
 
@@ -116,8 +123,23 @@ class Role(object):
             direction = self.direction
         if pressKey[pygame.K_LEFT] and pressKey[pygame.K_RIGHT] :
             direction = self.direction
+        
+        if(mouse_move_pos[0]>self.position[0]):
+            direction = Direction.RIGHT
+        else:
+            direction = Direction.LEFT
+
         return direction, runKeyPress   
 
+    def clipPosition(self,postion, threshold):
+        if(postion[0]<0):
+            postion[0]=0
+        if(postion[1]<0):
+            postion[1]=0
+        if(postion[0]>threshold[0]):
+            postion[0]=threshold[0]
+        if(postion[1]>threshold[1]):
+            postion[1]=threshold[1]
 
     def updatePosition(self, passTime, pressedKey):
         dis = self.speed*passTime/1000
@@ -130,10 +152,15 @@ class Role(object):
         if pressedKey[pygame.K_RIGHT] :
             self.position[0] = self.position[0] + dis
         #print(self.position)
+        
+        self.clipPosition(self.position,SCREENSIZE )
 
-    def update(self, passed_time, pressedKey) :
-        direction, runKeyPress = self.getDirection(pressedKey)
-        self.updatePosition(passed_time, pressedKey)
+    def get_srpite(self):
+        return self.sprite
+
+    def update(self, passTime, pressedKey,mouse_move_pos) :
+        direction, runKeyPress = self.getDirection(pressedKey, mouse_move_pos)
+        self.updatePosition(passTime, pressedKey)
 
         self.status = RoleStatus.IDLE
         if direction :
@@ -144,65 +171,85 @@ class Role(object):
         if pressedKey[pygame.K_a] :
             self.status = RoleStatus.ATTACK
         
-        sprite = self.spriteDict[self.status]
-        sprite.update(passed_time, self.direction, self.position)
+        self.sprite = self.spriteDict[self.status]
+        self.sprite.update(passTime, self.direction, self.position)
+
+
+class Enemy(Role):
+    def __init__(self, position, direction):
+        Role.__init__(self,position, direction)
+
+    def updatePosition(self, passTime):
+        offset=1
+        self.position[0]+=offset
+        self.clipPosition(self.position,SCREENSIZE)
+
+    def update(self, passTime):
+        self.status = RoleStatus.RUN
+        self.sprite = self.spriteDict[self.status]
+        self.updatePosition(passTime)
+        self.sprite.update(passTime, self.direction, self.position)
+
+    
         
 
 # Skill class
 class Skill_Spirte(pygame.sprite.Sprite):
-    def __init__(self, screen_surf, skill_surf, skill_rect, init_pos, direct_vec2):
+    def __init__(self, screen_surf, skill_surf, skill_rect, init_pos, dst_pos, transColor=None):
         pygame.sprite.Sprite.__init__(self)
         #surface
         self.screen = screen_surf
         self.sprit_surf = skill_surf
         self.skill_rect = skill_rect
+        self.skill_numb = len(skill_rect)
         #fps time 200 ms
         self.flush_time = 200
         #color key black
-        self.transColor = pygame.Color(0, 0, 0)
+        self.transColor = transColor
 
-        self.init_pos = list(init_pos)
+        self.init_pos = list(init_pos) 
         self.cur_pos= list(init_pos)
         self.speed = 200
-        self.direct_vec2 = direct_vec2
-        self.live_time = 0
-        self.angle=Vector2().angle_to(self.direct_vec2)
 
+
+        direct_vec = Vector2(dst_pos)-Vector2(init_pos)
+        direct_vec[1] = -direct_vec[1]
+        self.direct_vec2 = direct_vec.normalize()
+        self.angle=Vector2().angle_to(self.direct_vec2)
+        
+        self.live_time = 0
         self.live_dis=0
     
-    def move_pos(self, passtime):
+    def update_pos(self, passtime):
         self.live_dis += self.speed*passtime/1000
         self.cur_pos[0]= self.init_pos[0]+self.live_dis*self.direct_vec2[0]
         self.cur_pos[1]= self.init_pos[1]-self.live_dis*self.direct_vec2[1]
         
         self.rect=self.image.get_rect()
-        self.rect.move_ip(self.cur_pos[0], self.cur_pos[1])
+        #self.rect.move_ip(self.cur_pos[0], self.cur_pos[1])
+        self.rect.center=self.cur_pos
 
     def update_image(self, passtime):       
         self.live_time=self.live_time+passtime       
         
-        rect_index=int(self.live_time/self.flush_time % 4)
+        rect_index=int(self.live_time/self.flush_time % self.skill_numb)
         sub_surf=self.sprit_surf.subsurface(self.skill_rect[rect_index])
 
         rotate_surf=pygame.transform.rotate(sub_surf,180+self.angle)
-        rotate_surf.set_colorkey(self.transColor)
-        
+        if(self.transColor!=None):
+            rotate_surf.set_colorkey(self.transColor)
+ 
         self.image=rotate_surf
-
-
 
     def update(self, passtime):    
         self.update_image(passtime)
-        self.move_pos(passtime)
+        self.update_pos(passtime)
+
+
+
 
 
 pygame.init()
-
-SCREENSIZE      = (800,600)
-
-RESOURCEPATH    = getcwd() + '/pic'
-print (RESOURCEPATH)
-MAPPATH         = RESOURCEPATH + '/bg.jpg'
 
 screenSurface   = pygame.display.set_mode(SCREENSIZE,0,32)
 pygame.display.set_caption("hello game!")
@@ -229,8 +276,16 @@ Player.addSprite(RoleStatus.IDLE, roleIdleSpirt)
 Player.addSprite(RoleStatus.RUN,  roleRunSprit)
 Player.addSprite(RoleStatus.ATTACK,  roleAttackSpirt)
 
-transColor = pygame.Color(0, 0, 0)
-surf_skill=pygame.image.load(RESOURCEPATH+'/skill.png').convert()
+enemyIdleSpirt   = Role_Sprit(screenSurface)
+
+enemySpirtPath   = RESOURCEPATH + '/archer.png'
+enemyIdleSpirt.load(enemySpirtPath, 4, 4)
+enemy            =Enemy([300,200], Direction.LEFT)
+enemy.addSprite(RoleStatus.RUN, enemyIdleSpirt) 
+
+
+
+
 
 #Skill rect
 skill_rect = [] 
@@ -240,21 +295,26 @@ skill_col=4
 for i in range(0,skill_col):
     skill_rect.append(pygame.Rect(skill_split_w*i, 0, skill_split_w, skill_split_h))
 
-print(skill_rect)
+transColor = pygame.Color(0, 0, 0)
+surf_skill=pygame.image.load(RESOURCEPATH+'/skill.png').convert()
+#print(skill_rect)
 
-skill_pos=[200,200]
+enemy_skill_rect = []
+enemy_skill_rect.append([0,0,50,10])
+enemy_skill_surf=pygame.image.load(RESOURCEPATH+'/arrow.png').convert()
 
 
-#pygame.sprite.remove()
-#del(skill)
- 
-
+Role_sprits=pygame.sprite.Group()
 skills=pygame.sprite.Group()
+
+enemy_sprits=pygame.sprite.Group()
+enemy_skills=pygame.sprite.Group()
 
 while True:
     screenSurface.blit(bgSurface, (0,0))
     direction = None
     Passtime = clock.tick(60)
+
 #event loop
     for event in pygame.event.get():
         #print(event)
@@ -265,49 +325,57 @@ while True:
             if event.key == pygame.K_ESCAPE:
                 pygame.quit()
                 exit()
-        if event.type == MOUSEBUTTONDOWN:
-            
-            mouse_pos_v=Vector2(event.pos)
-            position_v=Vector2(Player.position)
-            print(position_v,mouse_pos_v)
+        if event.type == MOUSEMOTION:
+            mouse_move_pos=event.pos
+            #print(mouse_move_pos)
 
-            direct_vec = mouse_pos_v-position_v
-            direct_vec[1] = -direct_vec[1]
-            direct_vec = direct_vec.normalize()
-            angle=Vector2().angle_to(direct_vec)
-            print(angle)
-            
-            shoot_skill=Skill_Spirte(screenSurface,surf_skill,skill_rect,Player.position, direct_vec)
+        if event.type == MOUSEBUTTONDOWN:            
 
+            shoot_skill=Skill_Spirte(screenSurface,surf_skill,skill_rect,Player.position, event.pos, transColor)
             skills.add(shoot_skill)
-    
+            
+            enemy_skill=Skill_Spirte(screenSurface,enemy_skill_surf,enemy_skill_rect,enemy.position, Player.position, pygame.Color(255, 255, 255))
+            enemy_skills.add(enemy_skill)
+            
+
+#update    
+    Key  = pygame.key.get_pressed()
+    Player.update(Passtime, Key, mouse_move_pos)
+    player_sprit=Player.get_srpite()
+    Role_sprits.empty()
+    Role_sprits.add(player_sprit)
+
     for skill in skills:
         if skill.live_dis >200:
               skills.remove(skill)
         skill.update(Passtime)
+
+    enemy.update(Passtime)
+    enemy_sprits.add(enemy.get_srpite())
     
+    for skill in enemy_skills:
+        if skill.live_dis >200:
+                skills.remove(skill)
+        skill.update(Passtime)
+    
+
+#render    
+    Role_sprits.draw(screenSurface)
     skills.draw(screenSurface)
+    enemy_sprits.draw(screenSurface)
+    enemy_skills.draw(screenSurface)
     
-    Key  = pygame.key.get_pressed()
-    Player.update(Passtime, Key)
 
-    rect = Rect(300, 200 , 100, 100)
-    pygame.draw.rect(screenSurface,(255,255,0),rect,1)
-    Enemy=Skill_Spirte(screenSurface,surf_skill,skill_rect, [400,200], (1, 0))
-    Enemy.update(Passtime)
-    pygame.sprite.Group(Enemy).draw(screenSurface)
+    # pygame.draw.rect(screenSurface,(255,0,0),Enemy.rect,1)
 
-    skill_hit=pygame.sprite.spritecollide(Enemy,skills,0)
-    if skill_hit:
-        print("碰上啦")
-    for sp in skill_hit:
-        sp.kill()
-        print(sp.rect)
-        del(sp)
+    # skill_hit=pygame.sprite.spritecollide(Enemy,skills,0)
+    # if skill_hit:
+    #     print("碰上啦")
+    # for sp in skill_hit:
+    #     sp.kill()
+    #     print(sp.rect)
+    #     del(sp)
 
-    #rect.center = (50,50)
-    #pygame.draw.rect(screenSurface,(255,0,0),rect,1)
-    #print(pygame.key.get_pressed())
     pygame.display.update()
 
 
