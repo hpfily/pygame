@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 import pygame
-from pygame import Surface, Vector2, sprite, image
-from pygame.locals import *
+from pygame import *
 from sys import exit
 from os import getcwd
 
@@ -42,6 +41,8 @@ class Role_Sprit(pygame.sprite.Sprite):
         self.passed_time = 0
         self.spritRect = None
 
+        self.angle = 0
+
     def splitRect(self, surface, row=None, col=None):
         self.frameHeight = surface.get_height()/row
         self.frameWidth = surface.get_width()/col
@@ -71,11 +72,9 @@ class Role_Sprit(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         # self.rect.move_ip(postion)
         self.rect.center = postion
-
-        pygame.draw.rect(self.screen, (255, 0, 0), self.rect, 1)
+        #pygame.draw.rect(self.screen, (255, 0, 0), self.rect, 1)
 
     def update_image(self, passtime,  curDirection):
-
         self.direction = curDirection
 
         if self.isIdleSprit:
@@ -92,8 +91,18 @@ class Role_Sprit(pygame.sprite.Sprite):
         self.curBlitSrcRect = self.directRect[int(self.frame)]
         self.image = self.spritSurface.subsurface(self.curBlitSrcRect)
 
-    def update(self, passed_time, curDirection, postion):
+    def update_lose(self, postion):
+        if self.angle > 90:
+            #self.angle = 0
+            return
+        self.directRect = self.allFrameRect[self.direction]
+        self.curBlitSrcRect = self.directRect[0]
+        self.image = self.spritSurface.subsurface(self.curBlitSrcRect)
 
+        self.angle += 2
+        self.image = pygame.transform.rotate(self.image, self.angle)
+
+    def update(self, passed_time, curDirection, postion):
         self.update_image(passed_time, curDirection)
         self.update_pos(postion)
 
@@ -105,6 +114,7 @@ class Role(object):
         self.position = position
         self.speed = 80
         self.direction = direction
+        self.health = 100
         self.spriteDict = {RoleStatus.IDLE: None,
                            RoleStatus.RUN: None, RoleStatus.ATTACK: None}
 
@@ -169,9 +179,11 @@ class Role(object):
         return self.sprite
 
     def update(self, passTime, pressedKey, mouse_move_pos):
-        direction, runKeyPress = self.getDirection(pressedKey, mouse_move_pos)
-        self.updatePosition(passTime, pressedKey)
+        if(self.health <= 0):
+            self.sprite.update_lose(passTime)
+            return
 
+        direction, runKeyPress = self.getDirection(pressedKey, mouse_move_pos)
         self.status = RoleStatus.IDLE
         if direction:
             self.direction = direction
@@ -182,6 +194,7 @@ class Role(object):
             self.status = RoleStatus.ATTACK
 
         self.sprite = self.spriteDict[self.status]
+        self.updatePosition(passTime, pressedKey)
         self.sprite.update(passTime, self.direction, self.position)
 
 
@@ -190,8 +203,6 @@ class Enemy(Role):
         Role.__init__(self, position, direction)
 
     def updatePosition(self, passTime):
-     #       offset=1
-     #       self.position[0]+=offset
         self.clipPosition(self.position, SCREENSIZE)
 
     def update(self, passTime):
@@ -259,7 +270,7 @@ class HealthBar():
         self.pos = pos
         self.health = health
         self.max_health = max_health
-        self.width = 50
+        self.width = 60
         self.height = 8
 
     def draw(self, pos, health):
@@ -301,8 +312,7 @@ Player.addSprite(RoleStatus.IDLE, roleIdleSpirt)
 Player.addSprite(RoleStatus.RUN,  roleRunSprit)
 Player.addSprite(RoleStatus.ATTACK,  roleAttackSpirt)
 
-heath = 100
-heath_bar = HealthBar(Player.position, heath, heath)
+heath_bar = HealthBar(Player.position, 0, Player.health)
 
 enemyIdleSpirt = Role_Sprit(screenSurface)
 enemySpirtPath = RESOURCEPATH + '/archer.png'
@@ -394,18 +404,17 @@ while True:
     enemy_sprits.draw(screenSurface)
     enemy_skills.draw(screenSurface)
 
-    # pygame.draw.rect(screenSurface,(255,0,0),Enemy.rect,1)
-
     skill_hit = pygame.sprite.spritecollide(
         Player.get_srpite(), enemy_skills, 0)
     if skill_hit:
         print("被射中啦")
-        heath -= 10
+        Player.health -= 10
+        Player.health = max(Player.health, 0)
     for sp in skill_hit:
         sp.kill()
         print(sp.rect)
         del(sp)
 
-    heath_bar.draw(Player.get_srpite().rect.midtop, heath)
+    heath_bar.draw(Player.get_srpite().rect.midtop, Player.health)
 
     pygame.display.update()
