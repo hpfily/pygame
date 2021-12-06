@@ -275,13 +275,14 @@ class HealthBar():
 
     def draw(self, pos, health):
         self.pos = pos
-        self.health = health
-        ratio = self.health/self.max_health
         rect = pygame.Rect(0, 0, self.width, self.height)
         rect.center = self.pos
         pygame.draw.rect(SCREEN, RED, rect)
-        rect.width *= ratio
-        pygame.draw.rect(SCREEN, GREEN, rect)
+        self.health = health
+        if health > 0:
+            ratio = self.health/self.max_health
+            rect.width *= ratio
+            pygame.draw.rect(SCREEN, GREEN, rect)
 
 
 pygame.init()
