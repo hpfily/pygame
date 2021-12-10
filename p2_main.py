@@ -26,6 +26,8 @@ _KEYRIGHT=int(3)
 _KEYNUM=4
 
 KEY_MAP=[]
+for i in range(_KEYNUM):
+    KEY_MAP.append(False)
 
 
 
@@ -297,17 +299,18 @@ print(s.recv(1024).decode(encoding='utf8'))
 
 screenSurface = pygame.display.set_mode(SCREENSIZE, 0, 32)
 SCREEN = screenSurface
-pygame.display.set_caption("HongHu Smash! P1")
+pygame.display.set_caption("HongHu Smash! P2")
 
 bgSurface = pygame.image.load(MAPPATH).convert()
 clock = pygame.time.Clock()
 
 roleIdleSpirt = Role_Sprit(screenSurface, isIdleSprit=True)
+#RoleSpirtPath   = RESOURCEPATH + '/spritZF_run.png'
 RoleSpirtPath = RESOURCEPATH + '/player_run.png'
 roleIdleSpirt.load(RoleSpirtPath, 4, 4)
 
 roleRunSprit = Role_Sprit(screenSurface)
-
+#RoleSpirtPath   = RESOURCEPATH + '/spritZF_run.png'
 RoleSpirtPath = RESOURCEPATH + '/player_run.png'
 roleRunSprit.load(RoleSpirtPath, 4, 4)
 
@@ -320,21 +323,15 @@ Player.addSprite(RoleStatus.IDLE, roleRunSprit)
 Player.addSprite(RoleStatus.RUN,  roleRunSprit)
 Player.addSprite(RoleStatus.ATTACK,  roleAttackSpirt)
 
+heath_bar = HealthBar(Player.position, 0, Player.health)
 
+enemyRunSpirt = Role_Sprit(screenSurface)
+enemySpirtPath = RESOURCEPATH + '/playe2.png'
+enemyRunSpirt.load(enemySpirtPath, 4, 4)
 
-p2_IdleSpirt = Role_Sprit(screenSurface, isIdleSprit=True)
-p2_SpirtPath = RESOURCEPATH + '/playe2.png'
-p2_IdleSpirt.load(p2_SpirtPath, 4, 4)
-
-p2_RunSpirt = Role_Sprit(screenSurface)
-p2_RunSpirt.load(p2_SpirtPath, 4, 4)
-
-p2_player = Role([500, 200], Direction.LEFT)
-p2_player.addSprite(RoleStatus.IDLE, p2_IdleSpirt)
-p2_player.addSprite(RoleStatus.RUN, p2_RunSpirt)
-
-p1_heath_bar = HealthBar(Player.position, 0, Player.health)
-p2_heath_bar = HealthBar(p2_player.position, 0, p2_player.health)
+enemy = Role([500, 200], Direction.LEFT)
+enemy.addSprite(RoleStatus.IDLE, enemyRunSpirt)
+enemy.addSprite(RoleStatus.RUN, enemyRunSpirt)
 
 
 # Skill rect
@@ -364,23 +361,24 @@ enemy_skills = pygame.sprite.Group()
 mouse_move_pos = SCREENSIZE
 
 while True:
+    Passtime = clock.tick(60)
     screenSurface.blit(bgSurface, (0, 0))
     direction = None
-    Passtime = clock.tick(60)
 
+    KEY_MAP=[0]*_KEYNUM
 # event loop
     for event in pygame.event.get():
         # print(event)
         if event.type == QUIT:
             pygame.quit()
             exit()
-        if event.type == KEYDOWN:
+        if event.type == KEYDOWN:            
             if event.key == pygame.K_ESCAPE:
                 pygame.quit()
                 exit()
         if event.type == MOUSEMOTION:
             mouse_move_pos = event.pos
-
+            # print(mouse_move_pos)
 
         if event.type == MOUSEBUTTONDOWN:
 
@@ -389,15 +387,10 @@ while True:
             skills.add(shoot_skill)
 
             enemy_skill = Skill_Spirte(screenSurface, enemy_skill_surf, enemy_skill_rect,
-                                       p2_player.position, Player.position, pygame.Color(255, 255, 255))
+                                       enemy.position, Player.position, pygame.Color(255, 255, 255))
             enemy_skills.add(enemy_skill)
 
-
-# update
     Key = pygame.key.get_pressed()
-    
-    KEY_MAP=[0]*_KEYNUM
-
     if Key[pygame.K_UP]:
         KEY_MAP[_KEYUP] = True
     if Key[pygame.K_DOWN]:
@@ -407,20 +400,18 @@ while True:
     if Key[pygame.K_RIGHT]:
         KEY_MAP[_KEYRIGHT] = True
 
-    data=utils.packSocketData({'id': 'p1', 'key': KEY_MAP})
-
+#update    
+    data=utils.packSocketData({'id': 'p2', 'key': KEY_MAP})
     s.send(data)
     data_recv = utils.receiveAndReadSocketData(s)
-
+  
     Player.update(Passtime, data_recv['p1_key'], mouse_move_pos)
-    p2_player.update(Passtime, data_recv['p2_key'], mouse_move_pos)
-
-    #player_sprit = Player.get_srpite()
+    player_sprit = Player.get_srpite()
     Role_sprits.empty()
-    Role_sprits.add(Player.get_srpite())
-    
-    enemy_sprits.empty()
-    enemy_sprits.add(p2_player.get_srpite())
+    Role_sprits.add(player_sprit)
+
+    enemy.update(Passtime, data_recv['p2_key'], mouse_move_pos)
+    enemy_sprits.add(enemy.get_srpite())
     
 
 
@@ -451,7 +442,6 @@ while True:
         print(sp.rect)
         del(sp)
 
-    p1_heath_bar.draw(Player.get_srpite().rect.midtop, Player.health)
-    p2_heath_bar.draw(p2_player.get_srpite().rect.midtop, p2_player.health)
+    heath_bar.draw(Player.get_srpite().rect.midtop, Player.health)
 
     pygame.display.update()
