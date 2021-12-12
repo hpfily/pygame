@@ -3,13 +3,14 @@ import pygame
 from pygame import *
 from sys import exit
 from os import getcwd
+import server
 
 import socket
 import utils
 
 from enum import Enum
 
-SCREEN = None
+SCREEN=None
 SCREENSIZE = (1000, 600)
 RESOURCEPATH = getcwd() + '/pic'
 print(RESOURCEPATH)
@@ -19,16 +20,13 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLACK = (0, 0, 0)
 
-_KEYUP=int(0)
-_KEYDOWN=int(1)
-_KEYLEFT=int(2)
-_KEYRIGHT=int(3)
-_KEYNUM=4
+_KEYUP = int(0)
+_KEYDOWN = int(1)
+_KEYLEFT = int(2)
+_KEYRIGHT = int(3)
+_KEYNUM = 4
 
-KEY_MAP=[]
-for i in range(_KEYNUM):
-    KEY_MAP.append(False)
-
+KEY_MAP = []
 
 
 RoleStatus = Enum('RoleStatus', ('IDLE', 'RUN', 'ATTACK'))
@@ -182,7 +180,8 @@ class Role(object):
     def get_srpite(self):
         return self.sprite
 
-    def update(self, passTime, pressedKey, mouse_move_pos):
+    def update(self, passTime, pressedKey, mouse_move_pos, health):
+        self.health = health
         if(self.health <= 0):
             self.sprite.update_lose(passTime)
             return
@@ -227,7 +226,7 @@ class Skill_Spirte(pygame.sprite.Sprite):
         self.skill_rect = skill_rect
         self.skill_numb = len(skill_rect)
         # fps time 200 ms
-        self.flush_time = 200
+        self.flush_time = 100
         # color key black
         self.transColor = transColor
 
@@ -281,6 +280,7 @@ class HealthBar():
         self.pos = pos
         rect = pygame.Rect(0, 0, self.width, self.height)
         rect.center = self.pos
+        
         pygame.draw.rect(SCREEN, RED, rect)
         self.health = health
         if health > 0:
@@ -288,160 +288,203 @@ class HealthBar():
             rect.width *= ratio
             pygame.draw.rect(SCREEN, GREEN, rect)
 
+def game_start():
 
-pygame.init()
+    pygame.init()
 
-# network
-s = socket.socket()
-s.connect(('127.0.0.1', 6666))
-print(s.recv(1024).decode(encoding='utf8'))
-
-
-screenSurface = pygame.display.set_mode(SCREENSIZE, 0, 32)
-SCREEN = screenSurface
-pygame.display.set_caption("HongHu Smash! P2")
-
-bgSurface = pygame.image.load(MAPPATH).convert()
-clock = pygame.time.Clock()
-
-roleIdleSpirt = Role_Sprit(screenSurface, isIdleSprit=True)
-#RoleSpirtPath   = RESOURCEPATH + '/spritZF_run.png'
-RoleSpirtPath = RESOURCEPATH + '/player_run.png'
-roleIdleSpirt.load(RoleSpirtPath, 4, 4)
-
-roleRunSprit = Role_Sprit(screenSurface)
-#RoleSpirtPath   = RESOURCEPATH + '/spritZF_run.png'
-RoleSpirtPath = RESOURCEPATH + '/player_run.png'
-roleRunSprit.load(RoleSpirtPath, 4, 4)
-
-roleAttackSpirt = Role_Sprit(screenSurface)
-roleAttackSpirtPath = RESOURCEPATH + '/spritZF_attack.png'
-roleAttackSpirt.load(roleAttackSpirtPath, 4, 4)
-
-Player = Role([200, 200], Direction.RIGHT)
-Player.addSprite(RoleStatus.IDLE, roleRunSprit)
-Player.addSprite(RoleStatus.RUN,  roleRunSprit)
-Player.addSprite(RoleStatus.ATTACK,  roleAttackSpirt)
-
-heath_bar = HealthBar(Player.position, 0, Player.health)
-
-enemyRunSpirt = Role_Sprit(screenSurface)
-enemySpirtPath = RESOURCEPATH + '/playe2.png'
-enemyRunSpirt.load(enemySpirtPath, 4, 4)
-
-enemy = Role([500, 200], Direction.LEFT)
-enemy.addSprite(RoleStatus.IDLE, enemyRunSpirt)
-enemy.addSprite(RoleStatus.RUN, enemyRunSpirt)
+    # network
+    s = socket.socket()
+    s.connect(server.ADDRESS)
+    print(s.recv(1024).decode(encoding='utf8'))
 
 
-# Skill rect
-skill_rect = []
-skill_split_w = 60
-skill_split_h = 50
-skill_col = 4
-for i in range(0, skill_col):
-    skill_rect.append(pygame.Rect(skill_split_w*i, 0,
-                      skill_split_w, skill_split_h))
+    screenSurface = pygame.display.set_mode(SCREENSIZE, 0, 32)
+    global SCREEN
+    SCREEN = screenSurface
+    pygame.display.set_caption("HongHu Smash! P2")
 
-transColor = pygame.Color(0, 0, 0)
-surf_skill = pygame.image.load(RESOURCEPATH+'/skill.png').convert()
-# print(skill_rect)
+    bgSurface = pygame.image.load(MAPPATH).convert()
+    clock = pygame.time.Clock()
 
-enemy_skill_rect = []
-enemy_skill_rect.append([0, 0, 50, 10])
-enemy_skill_surf = pygame.image.load(RESOURCEPATH+'/arrow.png').convert()
+    p1_SpirtPath = RESOURCEPATH + '/player_run.png'
+    p1_IdleSpirt = Role_Sprit(screenSurface, isIdleSprit=True)
+    p1_IdleSpirt.load(p1_SpirtPath, 4, 4)
+    p1_RunSprit = Role_Sprit(screenSurface)
+    p1_RunSprit.load(p1_SpirtPath, 4, 4)
+
+    # roleAttackSpirt = Role_Sprit(screenSurface)
+    # roleAttackSpirtPath = RESOURCEPATH + '/spritZF_attack.png'
+    # roleAttackSpirt.load(roleAttackSpirtPath, 4, 4)
+
+    p1_pos = [200, 200]
+    p1_player = Role(p1_pos, Direction.RIGHT)
+    p1_player.addSprite(RoleStatus.IDLE, p1_IdleSpirt)
+    p1_player.addSprite(RoleStatus.RUN,  p1_RunSprit)
+    #Player.addSprite(RoleStatus.ATTACK,  roleAttackSpirt)
+
+    p2_SpirtPath = RESOURCEPATH + '/playe2.png'
+    p2_IdleSpirt = Role_Sprit(screenSurface, isIdleSprit=True)
+    p2_IdleSpirt.load(p2_SpirtPath, 4, 4)
+    p2_RunSpirt = Role_Sprit(screenSurface)
+    p2_RunSpirt.load(p2_SpirtPath, 4, 4)
+
+    p2_pos = [500, 200]
+    p2_player = Role(p2_pos, Direction.LEFT)
+    p2_player.addSprite(RoleStatus.IDLE, p2_IdleSpirt)
+    p2_player.addSprite(RoleStatus.RUN, p2_RunSpirt)
+
+    p1_health_bar = HealthBar(p1_player.position, 0, p1_player.health)
+    p2_health_bar = HealthBar(p2_player.position, 0, p2_player.health)
 
 
-Role_sprits = pygame.sprite.Group()
-skills = pygame.sprite.Group()
+    # Skill
+    transColor = pygame.Color(0, 0, 0)
+    surf_skill = pygame.image.load(RESOURCEPATH+'/skill.png').convert()
 
-enemy_sprits = pygame.sprite.Group()
-enemy_skills = pygame.sprite.Group()
+    skill_split_w = 50
+    skill_split_h = 45
+    skill_col = 4
+    p1_skill_rect = []
+    for i in range(0, skill_col):
+        p1_skill_rect.append(pygame.Rect(30+skill_split_w*i,
+                            305, skill_split_w, skill_split_h))
 
-mouse_move_pos = SCREENSIZE
+    skill_split_w = 60
+    skill_split_h = 50
+    p2_skill_rect = []
+    for i in range(0, skill_col):
+        p2_skill_rect.append(pygame.Rect(skill_split_w*i, skill_split_h,
+                                        skill_split_w, skill_split_h))
 
-while True:
-    Passtime = clock.tick(60)
-    screenSurface.blit(bgSurface, (0, 0))
-    direction = None
 
-    KEY_MAP=[0]*_KEYNUM
-# event loop
-    for event in pygame.event.get():
-        # print(event)
-        if event.type == QUIT:
-            pygame.quit()
-            exit()
-        if event.type == KEYDOWN:            
-            if event.key == pygame.K_ESCAPE:
+    p1_role_group = pygame.sprite.Group()
+    p1_skill_group = pygame.sprite.Group()
+
+    p2_role_group = pygame.sprite.Group()
+    p2_skill_group = pygame.sprite.Group()
+
+    mouse_move_pos = SCREENSIZE
+
+    # bgm
+    pygame.mixer.init()
+    pygame.mixer.music.load(RESOURCEPATH + '/bgm2.mp3')
+    pygame.mixer.music.play(1, 0)
+
+    while True:
+        screenSurface.blit(bgSurface, (0, 0))
+        direction = None
+        Passtime = clock.tick(60)
+
+        KEY_MAP = [0]*_KEYNUM
+        mouse_down_pos = 0
+    # event loop
+        for event in pygame.event.get():
+            # print(event)
+            if event.type == QUIT:
                 pygame.quit()
                 exit()
-        if event.type == MOUSEMOTION:
-            mouse_move_pos = event.pos
-            # print(mouse_move_pos)
+            if event.type == KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    exit()
+            if event.type == MOUSEMOTION:
+                mouse_move_pos = event.pos
 
-        if event.type == MOUSEBUTTONDOWN:
-
-            shoot_skill = Skill_Spirte(
-                screenSurface, surf_skill, skill_rect, Player.position, event.pos, transColor)
-            skills.add(shoot_skill)
-
-            enemy_skill = Skill_Spirte(screenSurface, enemy_skill_surf, enemy_skill_rect,
-                                       enemy.position, Player.position, pygame.Color(255, 255, 255))
-            enemy_skills.add(enemy_skill)
-
-    Key = pygame.key.get_pressed()
-    if Key[pygame.K_UP]:
-        KEY_MAP[_KEYUP] = True
-    if Key[pygame.K_DOWN]:
-        KEY_MAP[_KEYDOWN] = True
-    if Key[pygame.K_LEFT]:
-        KEY_MAP[_KEYLEFT] = True
-    if Key[pygame.K_RIGHT]:
-        KEY_MAP[_KEYRIGHT] = True
-
-#update    
-    data=utils.packSocketData({'id': 'p2', 'key': KEY_MAP})
-    s.send(data)
-    data_recv = utils.receiveAndReadSocketData(s)
-  
-    Player.update(Passtime, data_recv['p1_key'], mouse_move_pos)
-    player_sprit = Player.get_srpite()
-    Role_sprits.empty()
-    Role_sprits.add(player_sprit)
-
-    enemy.update(Passtime, data_recv['p2_key'], mouse_move_pos)
-    enemy_sprits.add(enemy.get_srpite())
-    
+            if event.type == MOUSEBUTTONDOWN:
+                mouse_down_pos = event.pos
 
 
-    for skill in skills:
-        if skill.live_dis > 200:
-            skills.remove(skill)
-        skill.update(Passtime)
-    for skill in enemy_skills:
-        if skill.live_dis > 200:
-            enemy_skills.remove(skill)
-        enemy_skills.update(Passtime)
+    # update
+        Key = pygame.key.get_pressed()
+        if Key[pygame.K_UP]:
+            KEY_MAP[_KEYUP] = True
+        if Key[pygame.K_DOWN]:
+            KEY_MAP[_KEYDOWN] = True
+        if Key[pygame.K_LEFT]:
+            KEY_MAP[_KEYLEFT] = True
+        if Key[pygame.K_RIGHT]:
+            KEY_MAP[_KEYRIGHT] = True
 
+        data = utils.packSocketData(
+            {'id': 'p2', 'key': KEY_MAP, 'mouse_move_pos': mouse_move_pos, 'mouse_down_pos': mouse_down_pos, 'player_health': p2_player.health})
 
-# render
-    Role_sprits.draw(screenSurface)
-    skills.draw(screenSurface)
-    enemy_sprits.draw(screenSurface)
-    enemy_skills.draw(screenSurface)
+        s.send(data)
+        data_recv = utils.receiveAndReadSocketData(s)
 
-    skill_hit = pygame.sprite.spritecollide(
-        Player.get_srpite(), enemy_skills, 0)
-    if skill_hit:
-        print("被射中啦")
-        Player.health -= 10
-        Player.health = max(Player.health, 0)
-    for sp in skill_hit:
-        sp.kill()
-        print(sp.rect)
-        del(sp)
+        # print(data_recv)
+        # Passtime=data_recv['passtime']
+        p1_player.update(Passtime, data_recv['p1_key'],
+                        data_recv['p1_mouse_move_pos'], data_recv['p1_player_health'])
+        p2_player.update(
+            Passtime, data_recv['p2_key'], data_recv['p2_mouse_move_pos'], data_recv['p2_player_health'])
 
-    heath_bar.draw(Player.get_srpite().rect.midtop, Player.health)
+        if data_recv['p1_mouse_down_pos'] != 0:
+            p1_skill = Skill_Spirte(
+                screenSurface, surf_skill, p1_skill_rect, p1_player.position, data_recv['p1_mouse_down_pos'], transColor)
+            p1_skill_group.add(p1_skill)
 
-    pygame.display.update()
+        if data_recv['p2_mouse_down_pos'] != 0:
+            p2_skill = Skill_Spirte(screenSurface, surf_skill, p2_skill_rect,
+                                    p2_player.position, data_recv['p2_mouse_down_pos'], transColor)
+            p2_skill_group.add(p2_skill)
+
+        p1_role_group.empty()
+        p1_role_group.add(p1_player.get_srpite())
+
+        p2_role_group.empty()
+        p2_role_group.add(p2_player.get_srpite())
+
+        skill_range = 200
+        for skill in p1_skill_group:
+            if skill.live_dis > skill_range:
+                p1_skill_group.remove(skill)
+            skill.update(Passtime)
+        for skill in p2_skill_group:
+            if skill.live_dis > skill_range:
+                p2_skill_group.remove(skill)
+            skill.update(Passtime)
+
+    # skill hit
+        # p1 hit
+        skill_hit = pygame.sprite.spritecollide(
+            p1_player.get_srpite(), p2_skill_group, 0)
+        if skill_hit:
+            #print("p1被射中啦")
+            p1_player.health -= 10
+            p1_player.health = max(p1_player.health, 0)
+        for sp in skill_hit:
+            sp.kill()
+            print(sp.rect)
+            del(sp)
+        # p2 hit
+        skill_hit = pygame.sprite.spritecollide(
+            p2_player.get_srpite(), p1_skill_group, 0)
+        if skill_hit:
+            #print("p2被射中啦")
+            p2_player.health -= 10
+            p2_player.health = max(p2_player.health, 0)
+        for sp in skill_hit:
+            sp.kill()
+            print(sp.rect)
+            del(sp)
+
+    # render
+        p1_role_group.draw(screenSurface)
+        p1_skill_group.draw(screenSurface)
+        p2_role_group.draw(screenSurface)
+        p2_skill_group.draw(screenSurface)
+
+        p1_health_bar.draw(p1_player.get_srpite().rect.midtop, p1_player.health)
+        p2_health_bar.draw(p2_player.get_srpite().rect.midtop, p2_player.health)
+
+        font1 = pygame.font.SysFont('Arial', 10)
+        font1.set_bold(True)
+        p1_text = font1.render("Rocky", True, GREEN)
+        rect = p1_text.get_rect()
+        rect.center = p1_player.get_srpite().rect.midbottom
+        screenSurface.blit(p1_text, rect)
+
+        pygame.display.update()
+
+if __name__ == '__main__':
+    game_start()
