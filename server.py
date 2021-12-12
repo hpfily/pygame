@@ -1,8 +1,5 @@
-
 import socket
 import threading
-import pygame.time
-import time
 import utils
 
 ADDRESS = ('127.0.0.1', 6666)
@@ -66,9 +63,6 @@ if __name__ == '__main__':
     thread.setDaemon(True)
     thread.start()
 
-    clock = pygame.time.Clock()
-    # input()
-    old_time = time.time()
     while True:
 
         # passtime=clock.tick(20)
