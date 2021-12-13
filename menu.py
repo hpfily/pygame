@@ -19,15 +19,14 @@ def game_main():
     print("Game Start!")
     pygame.init()
 
-#    show_text_dialog("Info", "You Win!")
     show_option_dialog()
 
-def show_text_dialog(caption, message, bg_color=white, font_front=red, font_back=blue):
+def show_text_dialog(caption, message, bg_color=blue, font_front=red, font_back=blue):
     print("Show Dialog!")
  
     # assigning values to X and Y variable
-    X = 400
-    Y = 200
+    X = 450
+    Y = 120
  
     # create the display surface object
     # of specific dimension..e(X, Y).
@@ -40,7 +39,7 @@ def show_text_dialog(caption, message, bg_color=white, font_front=red, font_back
     # 1st parameter is the font file
     # which is present in pygame.
     # 2nd parameter is size of the font
-    font = pygame.font.Font('freesansbold.ttf', 32)
+    font = pygame.font.Font('freesansbold.ttf', 96)
  
     # create a text surface object,
     # on which text is drawn on it.
@@ -113,6 +112,8 @@ def show_option_dialog():
 
     # todo insert the area to show the animation
     c.tr()
+    role = main.Role((100,100), 'LEFT')
+    
 
     def start_host_game():
         # handle the options
