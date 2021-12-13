@@ -3,6 +3,7 @@ import pygame
 from pygame import *
 from sys import exit
 from os import getcwd
+import menu
 
 import socket
 import utils
@@ -55,6 +56,8 @@ class Role_Sprit(pygame.sprite.Sprite):
 
         self.angle = 0
 
+        self.end=0
+
     def splitRect(self, surface, row=None, col=None):
         self.frameHeight = surface.get_height()/row
         self.frameWidth = surface.get_width()/col
@@ -106,6 +109,7 @@ class Role_Sprit(pygame.sprite.Sprite):
     def update_lose(self, postion):
         if self.angle > 90:
             #self.angle = 0
+            self.end=1
             return
         self.directRect = self.allFrameRect[self.direction]
         self.curBlitSrcRect = self.directRect[0]
@@ -317,7 +321,7 @@ def game_start(server_addr,player_name):
     # roleAttackSpirtPath = RESOURCEPATH + '/spritZF_attack.png'
     # roleAttackSpirt.load(roleAttackSpirtPath, 4, 4)
 
-    p1_pos = [200, 200]
+    p1_pos = [250, 300]
     p1_player = Role(p1_pos, Direction.RIGHT)
     p1_player.addSprite(RoleStatus.IDLE, p1_IdleSpirt)
     p1_player.addSprite(RoleStatus.RUN,  p1_RunSprit)
@@ -329,7 +333,7 @@ def game_start(server_addr,player_name):
     p2_RunSpirt = Role_Sprit(screenSurface)
     p2_RunSpirt.load(p2_SpirtPath, 4, 4)
 
-    p2_pos = [500, 200]
+    p2_pos = [800, 300]
     p2_player = Role(p2_pos, Direction.LEFT)
     p2_player.addSprite(RoleStatus.IDLE, p2_IdleSpirt)
     p2_player.addSprite(RoleStatus.RUN, p2_RunSpirt)
@@ -491,6 +495,13 @@ def game_start(server_addr,player_name):
         rect = p2_text.get_rect()
         rect.center = p2_player.get_srpite().rect.midbottom
         screenSurface.blit(p2_text, rect)
+        
+        if(p1_player.get_srpite().end):
+                menu.show_text_dialog('info','You Lose')
+                break
+        if(p2_player.get_srpite().end):
+                menu.show_text_dialog('info','You Win')
+                break
 
         pygame.display.update()
 

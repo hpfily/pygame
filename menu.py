@@ -165,6 +165,7 @@ def show_option_dialog():
             server_addr = (self.ip.value, int(self.port.value))
             print("start server %s:%s ..." % (self.ip.value, self.port.value))
             server_thread = threading.Thread(target=start_server, args=(server_addr,))
+            server_thread.setDaemon(True)
             server_thread.start()
 
             # start the game after 2 sec
