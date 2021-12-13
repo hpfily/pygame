@@ -56,7 +56,7 @@ class Role_Sprit(pygame.sprite.Sprite):
 
         self.angle = 0
 
-        self.end=0
+        self.end = 0
 
     def splitRect(self, surface, row=None, col=None):
         self.frameHeight = surface.get_height()/row
@@ -109,7 +109,7 @@ class Role_Sprit(pygame.sprite.Sprite):
     def update_lose(self, postion):
         if self.angle > 90:
             #self.angle = 0
-            self.end=1
+            self.end = 1
             return
         self.directRect = self.allFrameRect[self.direction]
         self.curBlitSrcRect = self.directRect[0]
@@ -174,7 +174,7 @@ class Role(object):
             postion[1] = threshold[1]
 
     def updatePosition(self, passTime, pressedKey):
-        dis = self.speed*passTime/1000
+        dis = self.speed*passTime/1000*2
         self.position[0] = self.position[0] + dis*self.mov_vec[0]
         self.position[1] = self.position[1] + dis*self.mov_vec[1]
         self.mov_vec = [0, 0]
@@ -293,11 +293,11 @@ class HealthBar():
             pygame.draw.rect(SCREEN, GREEN, rect)
 
 
-def game_start(server_addr,player_name):
+def game_start(server_addr, player_name):
 
     pygame.init()
 
-    #print(player_name)
+    # print(player_name)
     # network
     s = socket.socket()
     s.connect(server_addr)
@@ -408,7 +408,7 @@ def game_start(server_addr,player_name):
             KEY_MAP[_KEYRIGHT] = True
 
         data = utils.packSocketData(
-            {'id': 'p1', 'key': KEY_MAP, 'mouse_move_pos': mouse_move_pos, 'mouse_down_pos': mouse_down_pos, 'player_health': p1_player.health,'player_name':player_name})
+            {'id': 'p1', 'key': KEY_MAP, 'mouse_move_pos': mouse_move_pos, 'mouse_down_pos': mouse_down_pos, 'player_health': p1_player.health, 'player_name': player_name})
 
         s.send(data)
         data_recv = utils.receiveAndReadSocketData(s)
@@ -420,12 +420,12 @@ def game_start(server_addr,player_name):
         p2_player.update(
             Passtime, data_recv['p2_key'], data_recv['p2_mouse_move_pos'], data_recv['p2_player_health'])
 
-        if data_recv['p1_mouse_down_pos'] != 0:
+        if data_recv['p1_mouse_down_pos'] != 0 and p1_player.health != 0:
             p1_skill = Skill_Spirte(
                 screenSurface, surf_skill, p1_skill_rect, p1_player.position, data_recv['p1_mouse_down_pos'], transColor)
             p1_skill_group.add(p1_skill)
 
-        if data_recv['p2_mouse_down_pos'] != 0:
+        if data_recv['p2_mouse_down_pos'] != 0 and p2_player.health != 0:
             p2_skill = Skill_Spirte(screenSurface, surf_skill, p2_skill_rect,
                                     p2_player.position, data_recv['p2_mouse_down_pos'], transColor)
             p2_skill_group.add(p2_skill)
@@ -456,7 +456,7 @@ def game_start(server_addr,player_name):
             p1_player.health = max(p1_player.health, 0)
         for sp in skill_hit:
             sp.kill()
-            #print(sp.rect)
+            # print(sp.rect)
             del(sp)
         # p2 hit
         skill_hit = pygame.sprite.spritecollide(
@@ -467,7 +467,7 @@ def game_start(server_addr,player_name):
             p2_player.health = max(p2_player.health, 0)
         for sp in skill_hit:
             sp.kill()
-            #print(sp.rect)
+            # print(sp.rect)
             del(sp)
 
     # render
@@ -481,8 +481,8 @@ def game_start(server_addr,player_name):
         p2_health_bar.draw(
             p2_player.get_srpite().rect.midtop, p2_player.health)
 
-        p1_name=data_recv['player_name1']
-        p2_name=data_recv['player_name2']
+        p1_name = data_recv['player_name1']
+        p2_name = data_recv['player_name2']
 
         font1 = pygame.font.SysFont('Arial', 10)
         font1.set_bold(True)
@@ -495,13 +495,13 @@ def game_start(server_addr,player_name):
         rect = p2_text.get_rect()
         rect.center = p2_player.get_srpite().rect.midbottom
         screenSurface.blit(p2_text, rect)
-        
+
         if(p1_player.get_srpite().end):
-                menu.show_text_dialog('info','You Lose')
-                break
+            menu.show_text_dialog('info', 'You Lose')
+            break
         if(p2_player.get_srpite().end):
-                menu.show_text_dialog('info','You Win')
-                break
+            menu.show_text_dialog('info', 'You Win')
+            break
 
         pygame.display.update()
 

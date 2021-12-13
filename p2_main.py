@@ -174,7 +174,7 @@ class Role(object):
             postion[1] = threshold[1]
 
     def updatePosition(self, passTime, pressedKey):
-        dis = self.speed*passTime/1000
+        dis = self.speed*passTime/1000*2
         self.position[0] = self.position[0] + dis*self.mov_vec[0]
         self.position[1] = self.position[1] + dis*self.mov_vec[1]
         self.mov_vec = [0, 0]
@@ -420,12 +420,12 @@ def game_start(server_addr,player_name):
         p2_player.update(
             Passtime, data_recv['p2_key'], data_recv['p2_mouse_move_pos'], data_recv['p2_player_health'])
 
-        if data_recv['p1_mouse_down_pos'] != 0:
+        if data_recv['p1_mouse_down_pos'] != 0 and p1_player.health != 0:
             p1_skill = Skill_Spirte(
                 screenSurface, surf_skill, p1_skill_rect, p1_player.position, data_recv['p1_mouse_down_pos'], transColor)
             p1_skill_group.add(p1_skill)
 
-        if data_recv['p2_mouse_down_pos'] != 0:
+        if data_recv['p2_mouse_down_pos'] != 0 and p2_player.health != 0:
             p2_skill = Skill_Spirte(screenSurface, surf_skill, p2_skill_rect,
                                     p2_player.position, data_recv['p2_mouse_down_pos'], transColor)
             p2_skill_group.add(p2_skill)
