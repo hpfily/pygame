@@ -289,10 +289,11 @@ class HealthBar():
             pygame.draw.rect(SCREEN, GREEN, rect)
 
 
-def game_start(server_addr=('127.0.0.1', 6666)):
+def game_start(server_addr,player_name):
 
     pygame.init()
 
+    #print(player_name)
     # network
     s = socket.socket()
     s.connect(server_addr)
@@ -403,7 +404,7 @@ def game_start(server_addr=('127.0.0.1', 6666)):
             KEY_MAP[_KEYRIGHT] = True
 
         data = utils.packSocketData(
-            {'id': 'p1', 'key': KEY_MAP, 'mouse_move_pos': mouse_move_pos, 'mouse_down_pos': mouse_down_pos, 'player_health': p1_player.health})
+            {'id': 'p1', 'key': KEY_MAP, 'mouse_move_pos': mouse_move_pos, 'mouse_down_pos': mouse_down_pos, 'player_health': p1_player.health,'player_name':player_name})
 
         s.send(data)
         data_recv = utils.receiveAndReadSocketData(s)
@@ -451,7 +452,7 @@ def game_start(server_addr=('127.0.0.1', 6666)):
             p1_player.health = max(p1_player.health, 0)
         for sp in skill_hit:
             sp.kill()
-            print(sp.rect)
+            #print(sp.rect)
             del(sp)
         # p2 hit
         skill_hit = pygame.sprite.spritecollide(
@@ -462,7 +463,7 @@ def game_start(server_addr=('127.0.0.1', 6666)):
             p2_player.health = max(p2_player.health, 0)
         for sp in skill_hit:
             sp.kill()
-            print(sp.rect)
+            #print(sp.rect)
             del(sp)
 
     # render
@@ -476,14 +477,17 @@ def game_start(server_addr=('127.0.0.1', 6666)):
         p2_health_bar.draw(
             p2_player.get_srpite().rect.midtop, p2_player.health)
 
+        p1_name=data_recv['player_name1']
+        p2_name=data_recv['player_name2']
+
         font1 = pygame.font.SysFont('Arial', 10)
         font1.set_bold(True)
-        p1_text = font1.render("Hefang", True, GREEN)
+        p1_text = font1.render(p1_name, True, GREEN)
         rect = p1_text.get_rect()
         rect.center = p1_player.get_srpite().rect.midbottom
         screenSurface.blit(p1_text, rect)
 
-        p2_text = font1.render("Panfeng", True, BLUE)
+        p2_text = font1.render(p2_name, True, BLUE)
         rect = p2_text.get_rect()
         rect.center = p2_player.get_srpite().rect.midbottom
         screenSurface.blit(p2_text, rect)

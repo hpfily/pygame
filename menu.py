@@ -2,6 +2,7 @@
 import pygame
 from pgu import gui
 import main
+import p2_main
 from server import start_server
 import threading
 import time
@@ -18,8 +19,6 @@ def game_main():
     print("Game Start!")
     pygame.init()
 
-    show_text_dialog("Info", "You Win!")
-    show_text_dialog("Info", "You Lose!")
     show_option_dialog()
 
 def show_text_dialog(caption, message, bg_color=blue, font_front=red, font_back=blue):
@@ -113,6 +112,8 @@ def show_option_dialog():
 
     # todo insert the area to show the animation
     c.tr()
+    role = main.Role((100,100), 'LEFT')
+    
 
     def start_host_game():
         # handle the options
@@ -169,7 +170,7 @@ def show_option_dialog():
 
             # start the game after 2 sec
             time.sleep(2)
-            start_host_game()
+            main.game_start(server_addr,player_name.value)
 
 
     host_dialog = HostDialog(app)
@@ -208,7 +209,7 @@ def show_option_dialog():
             print("try to connect server %s:%s" % (self.server_ip.value, self.port.value))
             self.ex_app.quit()
             self.close()
-            main.game_start(server_addr)
+            p2_main.game_start(server_addr,player_name.value)
 
 
     join_dialog = JoinDialog(app)
