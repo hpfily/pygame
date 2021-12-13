@@ -3,7 +3,6 @@ import pygame
 from pygame import *
 from sys import exit
 from os import getcwd
-import server
 
 import socket
 import utils
@@ -290,13 +289,13 @@ class HealthBar():
             pygame.draw.rect(SCREEN, GREEN, rect)
 
 
-def game_start():
+def game_start(server_addr=('127.0.0.1', 6666)):
 
     pygame.init()
 
     # network
     s = socket.socket()
-    s.connect(server.ADDRESS)
+    s.connect(server_addr)
     print(s.recv(1024).decode(encoding='utf8'))
 
     screenSurface = pygame.display.set_mode(SCREENSIZE, 0, 32)

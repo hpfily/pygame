@@ -1,8 +1,11 @@
 # -*- coding:utf-8 -*-
 import pygame
 from pgu import gui
-#from main import Role
 import main
+from server import start_server
+import threading
+import time
+import socket
 
 # define the RGB value for white,
 #  green, blue colour .
@@ -110,7 +113,7 @@ def show_option_dialog():
     # todo insert the area to show the animation
     c.tr()
 
-    def start_game():
+    def start_host_game():
         # handle the options
         print("Player name is %s" % player_name.value)
         print("Gender is %s" % gender.value)
@@ -122,14 +125,100 @@ def show_option_dialog():
         print("Call the play function!")
         main.game_start()
         
+    class HostDialog(gui.Dialog):
+        def __init__(self, external_app):
+            self.ex_app = external_app
 
-    btn = gui.Button("Start Game!")
-    btn.connect(gui.CLICK, start_game)
+            title = gui.Label("Host Game")
+            table = gui.Table(width=200,height=200)
+            
+            table.tr()
+            table.td(gui.Label("Server Address"), colspan=3)
+
+            loop_addr = "127.0.0.1"
+            local_addr = get_local_addr()
+            table.tr()
+            table.td(gui.Label("IP : "))
+            self.ip = gui.Select(value=loop_addr)
+            self.ip.add(loop_addr, loop_addr)
+            self.ip.add(local_addr, local_addr)
+            table.td(self.ip, colspan=3)
+
+            self.port = gui.Input(value='6666',size=6)
+            table.tr()
+            table.td(gui.Label("port : "))
+            table.td(self.port)
+
+            button = gui.Button("Start Game")
+            button.connect(gui.CLICK, self.start_server_and_game)
+            table.tr()
+            table.td(button)
+            super(HostDialog, self).__init__(title, table)
+
+        def start_server_and_game(self):
+            # close the dialogs
+            self.ex_app.quit()
+            self.close()
+
+            # start the server
+            server_addr = (self.ip.value, int(self.port.value))
+            print("start server %s:%s ..." % (self.ip.value, self.port.value))
+            server_thread = threading.Thread(target=start_server, args=(server_addr,))
+            server_thread.start()
+
+            # start the game after 2 sec
+            time.sleep(2)
+            main.game_start(server_addr)
+
+
+    host_dialog = HostDialog(app)
+    btn_host = gui.Button("Host Game!")
+    btn_host.connect(gui.CLICK, host_dialog.open, None)
     c.tr()
-    c.td(btn,colspan=3)
+    c.td(btn_host,colspan=3)
 
+    class JoinDialog(gui.Dialog):
+        def __init__(self, external_app):
+            self.ex_app = external_app
+
+            title = gui.Label("Join Game")
+            table = gui.Table(width=200,height=200)
+            
+            self.server_ip = gui.Input(value='127.0.0.1',size=16)
+            table.tr()
+            table.td(gui.Label("Server Address"), colspan=3)
+            table.tr()
+            table.td(gui.Label("IP : "))
+            table.td(self.server_ip)
+
+            self.port = gui.Input(value='6666',size=6)
+            table.tr()
+            table.td(gui.Label("port : "))
+            table.td(self.port)
+
+            button = gui.Button("Connect")
+            button.connect(gui.CLICK, self.connect_server)
+            table.tr()
+            table.td(button)
+            super(JoinDialog, self).__init__(title, table)
+
+        def connect_server(self):
+            server_addr = (self.server_ip.value, int(self.port.value))
+            print("try to connect server %s:%s" % (self.server_ip.value, self.port.value))
+            self.ex_app.quit()
+            self.close()
+            main.game_start(server_addr)
+
+
+    join_dialog = JoinDialog(app)
+    btn_join = gui.Button("Join Game!")
+    btn_join.connect(gui.CLICK, join_dialog.open, None)
+    c.td(btn_join,colspan=3)
 
     app.run(c)
+
+def get_local_addr():
+    return (([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")] or [[(s.connect(("8.8.8.8", 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) + ["no IP found"])[0]
 
 if __name__ == "__main__":
     game_main()

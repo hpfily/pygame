@@ -9,14 +9,14 @@ g_conn_pool = []
 g_data_msg = {'p1': 0, 'p2': 0}
 
 
-def init():
+def init(addr):
     """
     初始化服务端
     """
     global g_socket_server
     g_socket_server = socket.socket(
         socket.AF_INET, socket.SOCK_STREAM)
-    g_socket_server.bind(ADDRESS)
+    g_socket_server.bind(addr)
     g_socket_server.listen(5)
     print("服务端已启动，等待客户端连接...")
 
@@ -54,9 +54,8 @@ def message_handle(client):
         g_data_msg[id] = msg
        #g_data_msg[id] = data_recv['key']
 
-
-if __name__ == '__main__':
-    init()
+def start_server(addr = ADDRESS):
+    init(addr)
     # pygame.init()
 
     thread = threading.Thread(target=accept_client)
@@ -76,3 +75,6 @@ if __name__ == '__main__':
             #print(data_send)
             g_data_msg['p1'] = 0
             g_data_msg['p2'] = 0
+
+if __name__ == '__main__':
+    start_server()
