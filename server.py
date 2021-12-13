@@ -50,6 +50,7 @@ def message_handle(client):
         msg.append(data_recv['mouse_move_pos'])
         msg.append(data_recv['mouse_down_pos'])
         msg.append(data_recv['player_health'])
+        msg.append(data_recv['player_name'])
 
         g_data_msg[id] = msg
        #g_data_msg[id] = data_recv['key']
@@ -68,7 +69,7 @@ def start_server(addr = ADDRESS):
         if g_data_msg['p2'] != 0 and g_data_msg['p1'] != 0:
 
             data_send = utils.packSocketData(
-                {'p1_key': g_data_msg['p1'][0], 'p2_key': g_data_msg['p2'][0], 'p1_mouse_move_pos': g_data_msg['p1'][1], 'p2_mouse_move_pos': g_data_msg['p2'][1], 'p1_mouse_down_pos': g_data_msg['p1'][2], 'p2_mouse_down_pos': g_data_msg['p2'][2], 'p1_player_health': g_data_msg['p1'][3], 'p2_player_health': g_data_msg['p2'][3]})
+                {'p1_key': g_data_msg['p1'][0], 'p2_key': g_data_msg['p2'][0], 'p1_mouse_move_pos': g_data_msg['p1'][1], 'p2_mouse_move_pos': g_data_msg['p2'][1], 'p1_mouse_down_pos': g_data_msg['p1'][2], 'p2_mouse_down_pos': g_data_msg['p2'][2], 'p1_player_health': g_data_msg['p1'][3], 'p2_player_health': g_data_msg['p2'][3],'player_name1': g_data_msg['p1'][4], 'player_name2': g_data_msg['p2'][4]})
 
             g_conn_pool[0].sendall(data_send)
             g_conn_pool[1].sendall(data_send)

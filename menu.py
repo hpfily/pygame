@@ -2,6 +2,7 @@
 import pygame
 from pgu import gui
 import main
+import p2_main
 from server import start_server
 import threading
 import time
@@ -168,7 +169,7 @@ def show_option_dialog():
 
             # start the game after 2 sec
             time.sleep(2)
-            main.game_start(server_addr)
+            main.game_start(server_addr,player_name.value)
 
 
     host_dialog = HostDialog(app)
@@ -207,7 +208,7 @@ def show_option_dialog():
             print("try to connect server %s:%s" % (self.server_ip.value, self.port.value))
             self.ex_app.quit()
             self.close()
-            main.game_start(server_addr)
+            p2_main.game_start(server_addr,player_name.value)
 
 
     join_dialog = JoinDialog(app)

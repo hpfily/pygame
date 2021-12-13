@@ -3,14 +3,13 @@ import pygame
 from pygame import *
 from sys import exit
 from os import getcwd
-import server
 
 import socket
 import utils
 
 from enum import Enum
 
-SCREEN=None
+SCREEN = None
 SCREENSIZE = (1000, 600)
 RESOURCEPATH = getcwd() + '/pic'
 print(RESOURCEPATH)
@@ -18,6 +17,7 @@ MAPPATH = RESOURCEPATH + '/bg2.jpg'
 
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
 BLACK = (0, 0, 0)
 
 _KEYUP = int(0)
@@ -280,7 +280,7 @@ class HealthBar():
         self.pos = pos
         rect = pygame.Rect(0, 0, self.width, self.height)
         rect.center = self.pos
-        
+
         pygame.draw.rect(SCREEN, RED, rect)
         self.health = health
         if health > 0:
@@ -288,20 +288,21 @@ class HealthBar():
             rect.width *= ratio
             pygame.draw.rect(SCREEN, GREEN, rect)
 
-def game_start():
+
+def game_start(server_addr,player_name):
 
     pygame.init()
 
+    #print(player_name)
     # network
     s = socket.socket()
-    s.connect(server.ADDRESS)
+    s.connect(server_addr)
     print(s.recv(1024).decode(encoding='utf8'))
-
 
     screenSurface = pygame.display.set_mode(SCREENSIZE, 0, 32)
     global SCREEN
     SCREEN = screenSurface
-    pygame.display.set_caption("HongHu Smash! P2")
+    pygame.display.set_caption("HongHu Smash! P1")
 
     bgSurface = pygame.image.load(MAPPATH).convert()
     clock = pygame.time.Clock()
@@ -336,7 +337,6 @@ def game_start():
     p1_health_bar = HealthBar(p1_player.position, 0, p1_player.health)
     p2_health_bar = HealthBar(p2_player.position, 0, p2_player.health)
 
-
     # Skill
     transColor = pygame.Color(0, 0, 0)
     surf_skill = pygame.image.load(RESOURCEPATH+'/skill.png').convert()
@@ -347,15 +347,14 @@ def game_start():
     p1_skill_rect = []
     for i in range(0, skill_col):
         p1_skill_rect.append(pygame.Rect(30+skill_split_w*i,
-                            305, skill_split_w, skill_split_h))
+                                         305, skill_split_w, skill_split_h))
 
     skill_split_w = 60
     skill_split_h = 50
     p2_skill_rect = []
     for i in range(0, skill_col):
         p2_skill_rect.append(pygame.Rect(skill_split_w*i, skill_split_h,
-                                        skill_split_w, skill_split_h))
-
+                                         skill_split_w, skill_split_h))
 
     p1_role_group = pygame.sprite.Group()
     p1_skill_group = pygame.sprite.Group()
@@ -393,7 +392,6 @@ def game_start():
             if event.type == MOUSEBUTTONDOWN:
                 mouse_down_pos = event.pos
 
-
     # update
         Key = pygame.key.get_pressed()
         if Key[pygame.K_UP]:
@@ -406,7 +404,7 @@ def game_start():
             KEY_MAP[_KEYRIGHT] = True
 
         data = utils.packSocketData(
-            {'id': 'p2', 'key': KEY_MAP, 'mouse_move_pos': mouse_move_pos, 'mouse_down_pos': mouse_down_pos, 'player_health': p2_player.health})
+            {'id': 'p2', 'key': KEY_MAP, 'mouse_move_pos': mouse_move_pos, 'mouse_down_pos': mouse_down_pos, 'player_health': p2_player.health,'player_name':player_name})
 
         s.send(data)
         data_recv = utils.receiveAndReadSocketData(s)
@@ -414,7 +412,7 @@ def game_start():
         # print(data_recv)
         # Passtime=data_recv['passtime']
         p1_player.update(Passtime, data_recv['p1_key'],
-                        data_recv['p1_mouse_move_pos'], data_recv['p1_player_health'])
+                         data_recv['p1_mouse_move_pos'], data_recv['p1_player_health'])
         p2_player.update(
             Passtime, data_recv['p2_key'], data_recv['p2_mouse_move_pos'], data_recv['p2_player_health'])
 
@@ -449,23 +447,23 @@ def game_start():
         skill_hit = pygame.sprite.spritecollide(
             p1_player.get_srpite(), p2_skill_group, 0)
         if skill_hit:
-            #print("p1被射中啦")
+            # print("p1被射中啦")
             p1_player.health -= 10
             p1_player.health = max(p1_player.health, 0)
         for sp in skill_hit:
             sp.kill()
-            print(sp.rect)
+            #print(sp.rect)
             del(sp)
         # p2 hit
         skill_hit = pygame.sprite.spritecollide(
             p2_player.get_srpite(), p1_skill_group, 0)
         if skill_hit:
-            #print("p2被射中啦")
+            # print("p2被射中啦")
             p2_player.health -= 10
             p2_player.health = max(p2_player.health, 0)
         for sp in skill_hit:
             sp.kill()
-            print(sp.rect)
+            #print(sp.rect)
             del(sp)
 
     # render
@@ -474,17 +472,28 @@ def game_start():
         p2_role_group.draw(screenSurface)
         p2_skill_group.draw(screenSurface)
 
-        p1_health_bar.draw(p1_player.get_srpite().rect.midtop, p1_player.health)
-        p2_health_bar.draw(p2_player.get_srpite().rect.midtop, p2_player.health)
+        p1_health_bar.draw(
+            p1_player.get_srpite().rect.midtop, p1_player.health)
+        p2_health_bar.draw(
+            p2_player.get_srpite().rect.midtop, p2_player.health)
+
+        p1_name=data_recv['player_name1']
+        p2_name=data_recv['player_name2']
 
         font1 = pygame.font.SysFont('Arial', 10)
         font1.set_bold(True)
-        p1_text = font1.render("Rocky", True, GREEN)
+        p1_text = font1.render(p1_name, True, GREEN)
         rect = p1_text.get_rect()
         rect.center = p1_player.get_srpite().rect.midbottom
         screenSurface.blit(p1_text, rect)
 
+        p2_text = font1.render(p2_name, True, BLUE)
+        rect = p2_text.get_rect()
+        rect.center = p2_player.get_srpite().rect.midbottom
+        screenSurface.blit(p2_text, rect)
+
         pygame.display.update()
+
 
 if __name__ == '__main__':
     game_start()
